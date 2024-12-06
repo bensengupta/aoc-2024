@@ -53,63 +53,11 @@ func findStart(grid [][]rune) (int, int) {
 	panic("expected to find start state, but failed")
 }
 
-func printGrid(grid [][]rune, row int, col int, dir Direction, obsRow int, obsCol int, visit [][]int) {
-	guard := "^"
-	if dir == right {
-		guard = ">"
-	} else if dir == down {
-		guard = "v"
-	} else if dir == left {
-		guard = "<"
-	}
-
-	for r, gridRow := range grid {
-		for c, cell := range gridRow {
-			if r == row && c == col {
-				print(guard)
-				continue
-			}
-			if r == obsRow && c == obsCol {
-				print("O")
-				continue
-			}
-			lr := (visit[r][c]&int(left))|(visit[r][c]&int(right)) != 0
-			ud := (visit[r][c]&int(up))|(visit[r][c]&int(down)) != 0
-			if lr && ud {
-				print("+")
-				continue
-			}
-			if lr {
-				print("-")
-				continue
-			}
-			if ud {
-				print("|")
-				continue
-			}
-			print(string(cell))
-		}
-		print("\n")
-	}
-	print("\n\n")
-}
-
-func simulateObstacle(grid [][]rune, row int, col int, dir Direction, obsRow int, obsCol int) int {
-	// early return: already determined that this obstacle pos can result in a loop
-	if grid[obsRow][obsCol] == 'x' {
-		return 0
-	}
-
+func simulate(grid [][]rune, row int, col int, dir Direction) int {
 	visit := make([][]int, len(grid))
 	for i := range visit {
 		visit[i] = make([]int, len(grid[0]))
 	}
-
-	if grid[obsRow][obsCol] != '.' {
-		log.Fatal("expected obstacle position to be '.' but got:", grid[obsRow][obsCol])
-	}
-
-	grid[obsRow][obsCol] = '#'
 
 	for {
 	inner:
@@ -118,14 +66,12 @@ func simulateObstacle(grid [][]rune, row int, col int, dir Direction, obsRow int
 			nextrow, nextcol := row+dr, col+dc
 
 			if nextrow < 0 || nextrow >= len(grid) || nextcol < 0 || nextcol >= len(grid[0]) {
-				grid[obsRow][obsCol] = '.'
 				return 0
 			}
 
 			if visit[nextrow][nextcol]&int(dir) != 0 {
 				// printGrid(grid, row, col, dir, obsRow, obsCol, visit)
-				// mark the loop and return
-				grid[obsRow][obsCol] = 'x'
+				// loop
 				return 1
 			}
 
@@ -166,31 +112,18 @@ func main() {
 
 	total := 0
 
-	row, col := findStart(grid)
-	grid[row][col] = '.'
-	dir := up
-outer:
-	for {
-	inner:
-		for {
-			dr, dc := getDirectionCoords(dir)
-			nextrow, nextcol := row+dr, col+dc
-			// println("nextrow ", nextrow, " nextcol ", nextcol, " dr ", dr, " dc ", dc)
+	startrow, startcol := findStart(grid)
+	startdir := up
+	grid[startrow][startcol] = '.'
 
-			if nextrow < 0 || nextrow >= len(grid) || nextcol < 0 || nextcol >= len(grid[0]) {
-				break outer
+	for obsRow := range grid {
+		for obsCol := range grid[0] {
+			if grid[obsRow][obsCol] == '.' {
+				grid[obsRow][obsCol] = '#'
+				total += simulate(grid, startrow, startcol, startdir)
+				grid[obsRow][obsCol] = '.'
 			}
-
-			if grid[nextrow][nextcol] == '#' {
-				break inner
-			}
-
-			total += simulateObstacle(grid, row, col, dir, nextrow, nextcol)
-
-			row, col = nextrow, nextcol
 		}
-
-		dir = incrementDirection(dir)
 	}
 
 	log.Println("Total is", total)
