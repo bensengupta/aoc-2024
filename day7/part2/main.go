@@ -17,11 +17,11 @@ func concat(num1 int64, num2 int64) int64 {
 }
 
 func hasCombination(sum int64, cur int64, nums []int64, i int) bool {
-	if cur == sum {
-		return true
-	}
-	if cur > sum || i == len(nums) {
+	if cur > sum {
 		return false
+	}
+	if i == len(nums) {
+		return cur == sum
 	}
 	return (hasCombination(sum, cur+nums[i], nums, i+1) ||
 		hasCombination(sum, cur*nums[i], nums, i+1) ||
@@ -71,4 +71,3 @@ func main() {
 
 	log.Println("Total is", total)
 }
-
